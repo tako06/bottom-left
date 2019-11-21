@@ -1,12 +1,13 @@
 import sys, random
 import svgwrite
+#import data   
 from svgwrite import cm,mm
 
 args = sys.argv
 
+### 長方形生成部分 ###
 num_blocks = int(args[1])
 rec = []
-
 mu = 5
 sigma = 2
 for i in range(num_blocks):
@@ -21,11 +22,10 @@ for i in range(num_blocks):
     if bl_size_y == 0:
         bl_size_y = 1
     rec.append([bl_size_x,bl_size_y])
-    
-rec[0] = [7,3]
-rec[1] = [3,2]
-rec[2] = [5,4]
 
+#rec = data.rec
+#rec.sort(key=lambda rec:(rec[0],rec[1]))
+#rec = rec[::-1]
 width = int(args[2])
 temp = 0
 xtemp = 0
@@ -33,24 +33,30 @@ ytemp = 0
 upoint = 0
 rpoint = 0
 count = 0
-# [x_axis,y_axis,x_enable,y_enable]
+# [x_axis,y_axis,x_enable,y_enable] y_axis、x_axisの順でソート
 corner = [[0,0,width,0]]
 newcorner = []
 ctemp = []
 delete = []
+# [rightup_x_axis,rightup_y_axis,width,height] rightup_y_axisで大きい順にソート
 umap = []
+# [rightup_x_axis,rightup_y_axis,width,height] rightup_x_axisで大きい順にソート
 rmap = []
 for i in range(len(rec)):
     newcorner = []
+    ### 配置するBL安定点の選択 ###
     for j in range(len(corner)):
         if(rec[i][0] <= corner[j][2] and (rec[i][1] <= corner[j][3] or corner[j][3] == 0)):
+            ### 加える長方形右側の新しいBL安定点の設定 ###
             upoint = 0
             ctemp = []
+            ### 加える長方形の右辺の真下に来る長方形の探索 ###
             for l in range(len(umap)):
                 if(corner[j][1]+rec[i][1] > umap[l][1]):
                     if(upoint == 0):
                         upoint = l+1
                     if(corner[j][0]+rec[i][0] >= umap[l][0]-umap[l][2] and corner[j][0]+rec[i][0] < umap[l][0]):
+                        ### 加える長方形右側の新しいBL安定点の探索 ###
                         for k in range(len(rmap)):
                             if(corner[j][0]+rec[i][0] < rmap[k][0]):
                                 if(rmap[k][1] > umap[l][1] and rmap[k][1] < corner[j][1]+rec[i][1]):
@@ -64,6 +70,7 @@ for i in range(len(rec)):
                                 break
                         ctemp.append(umap[l][1])
                         ctemp = ctemp[::-1]
+                        ### 新しいBL安定点の高さの範囲の設定 ###
                         ytemp = 0
                         for k in range(len(umap)):
                             if(umap[l][1] < umap[k][1]):
@@ -72,6 +79,7 @@ for i in range(len(rec)):
                                         ytemp = umap[k][1] - umap[k][3]
                             else:
                                 break
+                        ### 新しいBL安定点の幅の範囲の設定 ###
                         for k in range(len(ctemp)):
                             xtemp = width - corner[j][0] - rec[i][0]
                             for m in range(len(rmap)):
@@ -106,6 +114,8 @@ for i in range(len(rec)):
                         break
                 if(xtemp != 0):
                     newcorner.append([corner[j][0]+rec[i][0],0,xtemp,ytemp])
+
+            ### 加える長方形の上辺の真左に来る長方形の探索 ###
             rpoint = 0
             ctemp = []
             for l in range(len(rmap)):
@@ -113,6 +123,7 @@ for i in range(len(rec)):
                     if(rpoint == 0):
                         rpoint = l+1
                     if(corner[j][1]+rec[i][1] >= rmap[l][1]-rmap[l][3] and corner[j][1]+rec[i][1] < rmap[l][1]):
+                        ### 加える長方形上側の新しいBL安定点の探索 ###
                         for k in range(len(umap)):
                             if(corner[j][1]+rec[i][1] < umap[k][1]):
                                 if(umap[k][0] > rmap[l][0] and umap[k][0] < corner[j][0]+rec[i][0]):
@@ -126,6 +137,7 @@ for i in range(len(rec)):
                                 break
                         ctemp.append(rmap[l][0])
                         ctemp = ctemp[::-1]
+                        ### 新しいBL安定点の幅の範囲の設定 ###
                         xtemp = width
                         for k in range(len(rmap)):
                             if(rmap[l][0] < rmap[k][0]):
@@ -134,6 +146,7 @@ for i in range(len(rec)):
                                         xtemp = rmap[k][0] - rmap[k][2]
                             else:
                                 break
+                        ### 新しいBL安定点の高さの範囲の設定 ###
                         for k in range(len(ctemp)):
                             ytemp = 0
                             for m in range(len(umap)):
@@ -165,6 +178,8 @@ for i in range(len(rec)):
                         break
                 if(xtemp != 0):
                     newcorner.append([0,corner[j][1]+rec[i][1],xtemp,ytemp])
+
+            ### 加える長方形の座標と大きさの追加 ###
             if(upoint == 0):
                 umap.append([corner[j][0]+rec[i][0],corner[j][1]+rec[i][1],rec[i][0],rec[i][1]])
             else:
@@ -173,12 +188,16 @@ for i in range(len(rec)):
                 rmap.append([corner[j][0]+rec[i][0],corner[j][1]+rec[i][1],rec[i][0],rec[i][1]])
             else:
                 rmap.insert(rpoint-1,[corner[j][0]+rec[i][0],corner[j][1]+rec[i][1],rec[i][0],rec[i][1]])
+            
+            ### 加える長方形が干渉するBL安定点の範囲の更新 ###
             delete = []
             for l in range(len(corner)):
+                ### 加える長方形の範囲内の点の除去 ###
                 if(corner[l][0] >= corner[j][0] and corner[l][0] < corner[j][0]+rec[i][0]):
                     if(corner[l][1] >= corner[j][1] and corner[l][1] < corner[j][1]+rec[i][1]):
                         delete.append(l)
                         continue
+                ### BL安定点の範囲内に加える長方形があるかの探索 ###
                 if(corner[l][0] < corner[j][0]+rec[i][0] and corner[l][0]+corner[l][2] > corner[j][0]):
                     if(corner[l][1] < corner[j][1]+rec[i][1] and (corner[l][3] == 0 or corner[l][1]+corner[l][3] > corner[j][1])):
                         if(corner[l][1] >= corner[j][1]):
@@ -196,10 +215,9 @@ for i in range(len(rec)):
                                         break
                             newcorner.append([corner[l][0],corner[l][1],corner[j][0]-corner[l][0],corner[l][3]])
                             corner[l][3] = corner[j][1]-corner[l][1]
-                                    
-
             for l,num in enumerate(delete):
                 del(corner[num - l])
+            ### 新しいBL安定点をソートされるように追加 ###
             temp = 0
             for l in range(len(newcorner)):
                 if(newcorner[l][0] == width):
@@ -216,7 +234,9 @@ for i in range(len(rec)):
                     temp = len(corner)
             break
 
+### svgファイルの作成 ###
 leftup = umap[0][1] + 2
+print(umap[0][1])
 dwg = svgwrite.Drawing(filename="result.svg")
 for i in range(len(umap)):
     dwg.add(dwg.rect(insert=((umap[i][0]-umap[i][2])*(100/leftup)*mm,(leftup-umap[i][1])*(100/leftup)*mm),size=(umap[i][2]*(100/leftup)*mm,umap[i][3]*(100/leftup)*mm),fill='black',fill_opacity=0.4,stroke='black'))
